@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" type="text/css" href="static\styles.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <h1>Meeting Organizer</h1>
+        
+        <button id="createMeetingButton">Toplanı Oluştur</button>
+        
+        <div id="createMeetingForm" style="display: none;">
+            <h2>Toplantı Oluştur.</h2>
+            <form id="meetingForm">
+                <label for="subject">Konu:</label>
+                <input type="text" id="subject" name="subject" required><br><br>
+                <label for="date">Tarih:</label>
+                <input type="date" id="date" name="date" required><br><br>
+                <label for="startTime">Başlangıç Saati:</label>
+                <input type="time" id="startTime" name="startTime" required><br><br>
+                <label for="endTime">Bitiş Saati:</label>
+                <input type="time" id="endTime" name="endTime" required><br><br>
+                <label for="participants">Katılımcılar:</label>
+                <input type="text" id="participants" name="participants" required><br><br>
+                <button type="submit">Oluştur</button>
+            </form>
+        </div>
+
+        <button id="listMeetingsButton">List Meetings</button>
+
+        <ul id="meetingsList"></ul>
+
+    </div>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        document.getElementById('createMeetingButton').addEventListener('click', function() {
+            document.getElementById('createMeetingForm').style.display = 'block';
+        });
+
+        document.getElementById('meetingForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const formData = new FormData(this);
+            const data = {};
+            formData.forEach((value, key) => {
+                data[key] = value;
+            });
+
+            fetch('/api/meetings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert('Meeting created successfully');
+                console.log(data);
+                document.getElementById('createMeetingForm').style.display = 'none';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+
+        document.getElementById('listMeetingsButton').addEventListener('click', function() {
+            fetch('/api/meetings')
+                .then(response => response.json())
+                .then(data => {
+                const meetingsList = document.getElementById('meetingsList');
+                meetingsList.innerHTML = '';
+
+                data.forEach(meeting => {
+                    const listItem = document.createElement('li');
+                    listItem.textContent = `
+                    Subject: ${meeting.subject},
+                    Date: ${meeting.date},
+                    Start Time: ${meeting.startTime},
+                    End Time: ${meeting.endTime},
+                    Participants: ${meeting.participants}
+                    `;
+
+                    listItem.dataset.meetingId = meeting.id;
+                    
+                    const updateButton = document.createElement('button');
+                    updateButton.textContent = 'Güncelle';
+                    updateButton.addEventListener('click', () => {
+                        const meetingId = listItem.dataset.meetingId;
+                        window.location.href = `/update_form/${meetingId}`;
+                    });
+                    listItem.appendChild(updateButton);
+
+                    const deleteButton = document.createElement('button');
+                    deleteButton.textContent = 'Sil';
+                    deleteButton.addEventListener('click', () => {
+                    if (confirm('Toplantıyı silmek istediğinizden emin misiniz?')) {
+                        fetch(`/api/meetings/${meeting.id}`, {
+                        method: 'DELETE'
+                        })
+                        .then(() => {
+                        window.location.reload();
+                        })
+                        .catch(error => {
+                        console.error('Silme işlemi başarısız:', error);
+                        });
+                    }
+                    });
+                    listItem.appendChild(deleteButton);
+
+                    meetingsList.appendChild(listItem);
+                });
+                })
+                .catch(error => {
+                console.error('Error:', error);
+                });
+            });
+    </script>
+</body>
+</html>
